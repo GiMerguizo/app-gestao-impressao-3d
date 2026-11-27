@@ -1,0 +1,32 @@
+// Política de acesso da tailnet (painel Tailscale > Access controls).
+// Substitua os e-mails pelas contas dos dois sócios. Tudo que não está liberado aqui é BLOQUEADO.
+{
+  "groups": {
+    "group:socios": ["socio1@exemplo.com", "socio2@exemplo.com"],
+  },
+
+  // Só os sócios podem marcar um dispositivo como servidor do ERP.
+  // Dispositivos com tag não expiram a chave a cada 180 dias (o servidor não "cai" sozinho).
+  "tagOwners": {
+    "tag:erp-servidor": ["group:socios"],
+    "tag:backup-remoto": ["group:socios"],
+  },
+
+  "grants": [
+    // Sócios (notebooks e celulares) acessam o ERP por HTTPS e o servidor por SSH.
+    { "src": ["group:socios"], "dst": ["tag:erp-servidor"], "ip": ["tcp:443", "tcp:22"] },
+
+    // (Opcional) O servidor envia a cópia de backup por rsync/SSH a um computador marcado
+    // como tag:backup-remoto (ex.: notebook do sócio 2). Nada mais sai do servidor para a tailnet.
+    { "src": ["tag:erp-servidor"], "dst": ["tag:backup-remoto"], "ip": ["tcp:22"] },
+
+    // Os dispositivos dos sócios conversam entre si normalmente.
+    { "src": ["group:socios"], "dst": ["group:socios"], "ip": ["*"] },
+  ],
+
+  // Testes automáticos da política: o painel recusa salvar se algum falhar.
+  "tests": [
+    { "src": "socio1@exemplo.com", "accept": ["tag:erp-servidor:443"] },
+    { "src": "tag:erp-servidor", "deny": ["socio1@exemplo.com:22"] },
+  ],
+}

@@ -1,0 +1,13 @@
+# Configuração e segredos locais do servidor
+.env
+secrets/*
+!secrets/.gitkeep
+*.age-key
+*.key
+
+# Backups nunca vão para o Git
+backups/
+*.dump
+*.dump.age
+
+node_modules/

@@ -1,0 +1,18 @@
+{
+  "name": "erp3d-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API do ERP Impressão 3D: autenticação, permissões e armazenamento em PostgreSQL",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "cli": "node src/cli.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=22" },
+  "license": "MIT",
+  "dependencies": {
+    "express": "5.1.0",
+    "pg": "8.16.3"
+  }
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=ERP Impressao 3D - teste de restauracao do backup
+Requires=docker.service
+After=docker.service erp3d-backup.service
+
+[Service]
+Type=oneshot
+ExecStart=__RAIZ__/scripts/testar-restauracao.sh
+Nice=10
+TimeoutStartSec=1h

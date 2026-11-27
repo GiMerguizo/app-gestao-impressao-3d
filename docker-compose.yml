@@ -1,0 +1,150 @@
+# ERP Impressão 3D — hospedagem local no notebook-servidor.
+#
+#   Celular/notebook dos sócios ──(Tailscale, HTTPS)──> tailscale serve :443
+#        └─> 127.0.0.1:8080  web (Nginx: frontend + proxy /api)
+#              └─> rede "app" (interna)   backend (Node.js: login, permissões, API)
+#                    └─> rede "dados" (interna)  db (PostgreSQL, SEM porta publicada)
+#
+# Nada aqui fica exposto à internet nem à rede local: a única porta publicada
+# é 127.0.0.1:8080, acessível apenas de dentro do próprio notebook.
+
+name: erp3d
+
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-seguranca: &seguranca
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  db:
+    image: ${PG_IMAGE:-postgres:17-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: erp3d
+      POSTGRES_USER: erp3d
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --data-checksums"
+      TZ: ${TZ:-America/Sao_Paulo}
+      PGTZ: ${TZ:-America/Sao_Paulo}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=512MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - max_connections=30
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - log_connections=off
+      - -c
+      - password_encryption=scram-sha-256
+    secrets:
+      - db_password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - dados
+    shm_size: 128mb
+    mem_limit: ${DB_MEM_LIMIT:-768m}
+    stop_grace_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp3d -d erp3d -q"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *logs
+
+  backend:
+    build: ./backend
+    image: erp3d-backend:local
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: erp3d
+      DB_USER: erp3d
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      SESSAO_INATIVIDADE_HORAS: ${SESSAO_INATIVIDADE_HORAS:-72}
+      SESSAO_MAX_DIAS: ${SESSAO_MAX_DIAS:-30}
+      LOGIN_MAX_FALHAS_USUARIO: ${LOGIN_MAX_FALHAS_USUARIO:-8}
+      LOGIN_MAX_FALHAS_IP: ${LOGIN_MAX_FALHAS_IP:-20}
+      LOGIN_JANELA_MIN: ${LOGIN_JANELA_MIN:-15}
+      TZ: ${TZ:-America/Sao_Paulo}
+    secrets:
+      - db_password
+    networks:
+      - app
+      - dados
+    read_only: true
+    tmpfs:
+      - /tmp
+    <<: *seguranca
+    mem_limit: ${BACKEND_MEM_LIMIT:-384m}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logs
+
+  web:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    image: erp3d-web:local
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Somente localhost. O tailscale serve faz a ponte para a rede privada.
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"
+    networks:
+      - publica
+      - app
+    read_only: true
+    tmpfs:
+      - /tmp
+    <<: *seguranca
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logs
+
+networks:
+  publica: {}          # apenas para publicar a porta do Nginx em 127.0.0.1
+  app:
+    internal: true     # Nginx <-> backend, sem acesso à internet
+  dados:
+    internal: true     # backend <-> PostgreSQL, sem acesso à internet
+
+volumes:
+  db_data:
+    name: erp3d_db_data   # nome fixo: "docker compose down" não apaga; só "down -v" apagaria
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
