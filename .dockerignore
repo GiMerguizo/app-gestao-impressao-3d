@@ -1,0 +1,11 @@
+.git
+.env
+secrets
+backups
+docs
+scripts
+servidor
+**/node_modules
+**/test
+*.dump
+*.age

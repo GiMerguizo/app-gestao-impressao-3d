@@ -1,0 +1,11 @@
+# Semanal, domingo 03:30 (depois do backup). Persistent=true recupera execuções perdidas.
+[Unit]
+Description=Teste semanal de restauracao do backup do ERP
+
+[Timer]
+OnCalendar=Sun *-*-* 03:30:00
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

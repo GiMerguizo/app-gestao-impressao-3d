@@ -1,0 +1,18 @@
+# Sobe o ERP no boot (depois do Docker e da rede). Os containers também têm restart: unless-stopped.
+[Unit]
+Description=ERP Impressao 3D (Docker Compose)
+Requires=docker.service
+After=docker.service network-online.target local-fs.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=__RAIZ__
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose stop
+TimeoutStartSec=600
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

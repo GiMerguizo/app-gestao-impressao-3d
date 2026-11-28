@@ -1,0 +1,8 @@
+[Unit]
+Description=ERP Impressao 3D - verificacao de saude
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=__RAIZ__/scripts/monitorar.sh
+TimeoutStartSec=2min

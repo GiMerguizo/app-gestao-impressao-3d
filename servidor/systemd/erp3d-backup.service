@@ -1,0 +1,11 @@
+[Unit]
+Description=ERP Impressao 3D - backup do PostgreSQL
+Requires=docker.service
+After=docker.service erp3d.service
+
+[Service]
+Type=oneshot
+ExecStart=__RAIZ__/scripts/backup.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=3h

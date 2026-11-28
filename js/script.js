@@ -10,6 +10,7 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.
 function cpg(f){return f.peso0>0?f.preco/f.peso0:0}
 function draw(){
  const a=$("#m"),fo=document.activeElement;if(fo&&a.contains(fo)&&tab!=="p"&&(fo.tagName==="INPUT"||(fo.tagName==="SELECT"&&fo.closest(".keep"))))return;
+ if(typeof telaAtiva!=="undefined"&&telaAtiva)return;
  if(!ready){a.innerHTML='<div class="em">Carregando dados…</div>';return}
  a.innerHTML={p:painel,f:filamentos,c:calculadora,r:produtos,o:orcamentos,v:pedidos,k:compras,n:financeiro}[tab]();
  if(tab==="c")bindCalc()}
@@ -336,7 +337,7 @@ function financeiro(){
  <div class="card tw">${lan.length?`<table><tr><th>Data</th><th>Tipo</th><th>Sócio / descrição</th><th>Valor</th><th>Obs.</th><th>Quem</th><th></th></tr>`+lan.map(x=>`<tr style="${x.cancelado?"opacity:.5;text-decoration:line-through":""}"><td>${fd(x.data)}</td><td>${TN[x.tipo]||esc(x.tipo)}</td><td>${esc(nomeS(x)||x.descr)}</td><td>${R(x.valor)}</td><td>${esc(x.obs)}</td><td>${esc(x.por)}</td><td>${x.cancelado?"Anulado":`<button class="s d" onclick="cancFin('${x.id}')">Anular</button>`}</td></tr>`).join("")+"</table>":'<div class="em">Nenhum lançamento no período. Aportes e retiradas são registrados na tabela de sócios.</div>'}</div>`}
 let meName="Sócio";
 const sn=(q,fn)=>db.collection(q).onSnapshot(s=>{fn(s.docs.map(d=>({id:d.id,...d.data()})));draw()},e=>toast("Erro ao ler "+q));
-/* Banco local: usado quando a página roda fora do Claude. Dados ficam só neste navegador. */
+/* Banco local: usado quando a página roda sem o servidor próprio e fora do Claude. Dados ficam só neste navegador. */
 function localDb(){
  let store={};try{store=JSON.parse(localStorage.getItem("erp3d")||"{}")}catch(e){}
  const subs=[],cp=o=>JSON.parse(JSON.stringify(o));
@@ -357,10 +358,14 @@ function localDb(){
  return{doc:docRef,collection:colRef}}
 const comTempo=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms))]);
 (async()=>{
+ const srv=typeof conectarServidor==="function"?await conectarServidor():null;
+ if(srv){db=srv.db;meName=srv.me.usuario.nome}
+ else{
  const [u,d0]=await Promise.all([comTempo((async()=>{try{return await claude.use("user")}catch(e){return null}})(),2500),comTempo((async()=>{try{return await claude.use("db")}catch(e){return null}})(),2500)]);
  try{const me=u&&await u.me();if(me&&me.name)meName=me.name}catch(e){}
  db=d0;
  if(!db){db=localDb();$("header h1").textContent+=" · modo local (dados só neste navegador)"}
+ }
  db.doc("config/custos").onSnapshot(s=>{if(s.exists)cfg={...cfg,...s.data()};draw()});
  db.doc("config/impressora").onSnapshot(s=>{if(s.exists)imp=s.data();draw()});
  db.doc("config/ams").onSnapshot(s=>{if(s.exists)ams=s.data();draw()});

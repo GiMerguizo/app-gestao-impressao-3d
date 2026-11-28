@@ -26,4 +26,6 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--ln);white-space:
 .tot{border-top:1px solid var(--ln);margin-top:6px;padding-top:8px;font-weight:700}
 .hb{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}.hb i{display:block;height:10px;border-radius:4px;background:var(--ac);flex:1 1 auto}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
-#toast.on{opacity:1}.em{color:var(--mu);text-align:center;padding:22px}
+#toast.on{opacity:1}.em{color:var(--mu);text-align:center;padding:22px}.ub{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px}.ub button{background:rgba(255,255,255,.15);border:0;color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer;font:inherit}
+.ub select{width:auto;padding:4px 6px;background:rgba(255,255,255,.15);color:#fff;border:0}.ub select option{color:#000}
+.login{max-width:360px;margin:40px auto}
